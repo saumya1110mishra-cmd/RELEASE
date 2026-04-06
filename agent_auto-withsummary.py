@@ -4,15 +4,10 @@ from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 from email.mime.text import MIMEText
 import smtplib
-from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import re
-import google.generativeai as genai
-from openai import OpenAI
 import json
-from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 load_dotenv()
 # -------------------------------------------------------------
@@ -30,11 +25,11 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_APP_PASSWORD = os.getenv("SENDER_APP_PASSWORD")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 RECIPIENTS = os.getenv("RECIPIENTS")
-genai.configure(api_key=GEMINI_API_KEY)
+#genai.configure(api_key=GEMINI_API_KEY)
 # model = genai.GenerativeModel("gemini-1.5-flash")
 # model = genai.GenerativeModel("gemini-1.5-flash-latest")
-model = genai.GenerativeModel("gemini-1.5-pro-latest")
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+#model = genai.GenerativeModel("gemini-1.5-pro-latest")
+#client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # -------------------------------------------------------------
 # RSS FETCHERS
@@ -63,9 +58,6 @@ def extract_version(text):
     import re
     match = re.search(r'v?\d+(\.\d+)*', text)
     return match.group(0) if match else "N/A"
-
-import requests
-from bs4 import BeautifulSoup
 
 
 def fetch_latest_release_from_html(url, platform):
