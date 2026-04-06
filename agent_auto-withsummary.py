@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 from email.mime.text import MIMEText
 import smtplib
 import requests
+import re
 from bs4 import BeautifulSoup
 from datetime import datetime
 import json
