@@ -60,6 +60,15 @@ def extract_version(text):
     match = re.search(r'v?\d+(\.\d+)*', text)
     return match.group(0) if match else "N/A"
 
+def fetch_with_retry(url):
+        for attempt in range(3):
+            try:
+                response = requests.get(url, timeout=40)
+                response.raise_for_status()
+                return response
+            except Exception as e:
+                print(f"Retry {attempt+1} failed: {e}")
+        return None
 
 def fetch_latest_release_from_html(url, platform):
     """
@@ -69,9 +78,10 @@ def fetch_latest_release_from_html(url, platform):
     """
 
     try:
-        response = requests.get(url, timeout=20)
-        response.raise_for_status()
-
+        response = fetch_with_retry(url)
+        if not response:
+            print(f"❌ Failed to fetch {platform}")
+            return None
         soup = BeautifulSoup(response.text, "html.parser")
 
         version = None
@@ -163,7 +173,7 @@ def fetch_latest_release_from_html(url, platform):
     except Exception as e:
         print(f"❌ Error fetching {platform}: {e}")
         return None
-    
+  
 def fetch_all_release_notes():
     sources = {
         "Google Ads": "https://developers.google.com/google-ads/api/docs/release-notes",
@@ -304,7 +314,13 @@ Release Notes:
 
 ## - de-duplication logic
 def get_existing_records():
-    creds_dict = json.loads(os.getenv("SERVICE_ACCOUNT_JSON"))
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+
+    if service_account_json:
+        creds_dict = json.loads(service_account_json)
+    else:
+        with open("credentials.json") as f:
+            creds_dict = json.load(f)
 
     creds = Credentials.from_service_account_info(
     creds_dict,
@@ -334,7 +350,13 @@ def get_existing_records():
 # GOOGLE SHEETS WRITER
 # -------------------------------------------------------------
 def append_to_google_sheet(data):
-    creds_dict = json.loads(os.getenv("SERVICE_ACCOUNT_JSON"))
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+
+    if service_account_json:
+        creds_dict = json.loads(service_account_json)
+    else:
+        with open("credentials.json") as f:
+            creds_dict = json.load(f)
 
     creds = Credentials.from_service_account_info(
     creds_dict,
@@ -401,7 +423,13 @@ def append_to_google_sheet(data):
 
 
 def get_latest_rows(limit=3):
-    creds_dict = json.loads(os.getenv("SERVICE_ACCOUNT_JSON"))
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+
+    if service_account_json:
+        creds_dict = json.loads(service_account_json)
+    else:
+        with open("credentials.json") as f:
+            creds_dict = json.load(f)
 
     creds = Credentials.from_service_account_info(
     creds_dict,
@@ -427,7 +455,13 @@ def send_email(sheet_link, recipients):
     # -------------------------------------------------------------
     # FETCH LATEST ROWS FROM GOOGLE SHEET
     # -------------------------------------------------------------
-    creds_dict = json.loads(os.getenv("SERVICE_ACCOUNT_JSON"))
+    service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
+
+    if service_account_json:
+        creds_dict = json.loads(service_account_json)
+    else:
+        with open("credentials.json") as f:
+            creds_dict = json.load(f)
 
     creds = Credentials.from_service_account_info(
     creds_dict,
