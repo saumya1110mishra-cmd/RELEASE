@@ -14,23 +14,14 @@ load_dotenv()
 # -------------------------------------------------------------
 # CONFIGURATION
 # -------------------------------------------------------------
-# GOOGLE_SHEET_ID = "10mrWQDc8u0N1wGmYX-671x2Qu7KnwsbZcTv2creXnkY"
-# SERVICE_ACCOUNT_FILE = "credentials.json"
-# RECIPIENTS = ["saumya1110mishra@gmail.com"]
-# SENDER_EMAIL = "saumya1110mishra@gmail.com"
-# SENDER_APP_PASSWORD = "kipc xjil fipt tjmz"
-# GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+
 GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_APP_PASSWORD = os.getenv("SENDER_APP_PASSWORD")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 RECIPIENTS = os.getenv("RECIPIENTS")
-#genai.configure(api_key=GEMINI_API_KEY)
-# model = genai.GenerativeModel("gemini-1.5-flash")
-# model = genai.GenerativeModel("gemini-1.5-flash-latest")
-#model = genai.GenerativeModel("gemini-1.5-pro-latest")
-#client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 # -------------------------------------------------------------
 # RSS FETCHERS
@@ -243,74 +234,6 @@ Release Notes:
     except Exception as e:
         print("AI Summary Error:", e)
         return "AI Summary unavailable"
-
-# def generate_ai_summary(text):
-#     try:
-#         prompt = f"""
-# You are a Marketing Technology Analyst.
-
-# Summarize the following release notes clearly for business users.
-
-# Return ONLY in this format:
-
-# Focus on:
-# - Business impact
-# - Revenue implications
-# - Required actions for marketers
-# - Keep it concise and actionable
-
-# Release Notes:
-# {text}
-# """
-
-#         response = client.chat.completions.create(
-#             model="gpt-4o-mini",
-#             messages=[
-#                 {"role": "user", "content": prompt}
-#             ],
-#             temperature=0.3
-#         )
-
-#         return response.choices[0].message.content.strip()
-
-#     except Exception as e:
-#         print("AI Summary Error:", e)
-#         return "AI Summary unavailable"
-
-
-# def generate_ai_summary(text):
-#     """
-#     Uses Google Gemini (free tier)
-#     to create business-friendly release summary
-#     """
-
-#     try:
-#         prompt = f"""
-# You are a Marketing Technology Analyst.
-
-# Summarize the following release notes clearly for business users.
-
-# Return ONLY in this format:
-
-# Impact:
-# Action Required:
-# Risk Level:
-# Who Should Care:
-
-# Release Notes:
-# {text}
-# """
-
-#         response = model.generate_content(prompt)
-
-#         if response.text:
-#             return response.text.strip()
-
-#         return "AI Summary unavailable"
-
-#     except Exception as e:
-#         print("AI Summary Error:", e)
-#         return "AI Summary unavailable"
 
 ## - de-duplication logic
 def get_existing_records():
