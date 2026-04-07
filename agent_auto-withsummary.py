@@ -272,21 +272,27 @@ def generate_ai_summary(text):
         }
 
         prompt = f"""
+
 You are a Marketing Technology Analyst.
 
-Summarize the following release notes clearly for business users.
+Analyze the release notes and generate a concise structured summary.
 
-Return ONLY in this format:
+STRICT RULES:
+- Provide ONLY ONE combined summary (NOT section-wise)
+- DO NOT repeat headings multiple times
+- DO NOT explain each feature separately
+- Keep answers short and business-focused
 
-Impact:
-Action Required:
-Risk Level:
-Who Should Care:
+Return EXACTLY in this format:
 
-Do NOT add any extra sentences like "Let me know..." or explanations.
+Impact: 
+Action Required: 
+Risk Level: <Low / Medium / High>
+Who Should Care: <Teams>
 
 Release Notes:
 {text}
+
 """
 
         payload = {
@@ -342,6 +348,31 @@ def get_existing_records():
 
     return existing
 
+def remove_bold_from_new_rows(sheet_service, spreadsheet_id, start_row, num_rows):
+    requests = [
+        {
+            "repeatCell": {
+                "range": {
+                    "sheetId": 0,
+                    "startRowIndex": start_row,
+                    "endRowIndex": start_row + num_rows
+                },
+                "cell": {
+                    "userEnteredFormat": {
+                        "textFormat": {
+                            "bold": False
+                        }
+                    }
+                },
+                "fields": "userEnteredFormat.textFormat.bold"
+            }
+        }
+    ]
+
+    sheet_service.batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={"requests": requests}
+    ).execute()
 
 # -------------------------------------------------------------
 # GOOGLE SHEETS WRITER
@@ -385,21 +416,7 @@ def append_to_google_sheet(data):
             ai_summary
         ])
 
-    # Check if header exists
-    existing = sheet.values().get(
-        spreadsheetId=GOOGLE_SHEET_ID,
-        range="A1:E1"
-    ).execute()
 
-    if not existing.get("values"):
-        headers = [["Platform", "Version/Release Month", "Release Notes", "Date", "AI Summary"]]
-        sheet.values().update(
-            spreadsheetId=GOOGLE_SHEET_ID,
-            range="A1:E1",
-            valueInputOption="RAW",
-            body={"values": headers}
-        ).execute()
-        print("🧾 Added header row to sheet.")
 
     if not values:
         print("✅ No updates available")
@@ -414,6 +431,9 @@ def append_to_google_sheet(data):
         insertDataOption="INSERT_ROWS",
         body=body
     ).execute()
+    num_rows_added = len(values)
+    start_row = len(existing_records) + 1
+    remove_bold_from_new_rows(sheet, GOOGLE_SHEET_ID, start_row, num_rows_added)
 
     print(f"✅ {len(values)} new rows added to Google Sheet.")
     return True
