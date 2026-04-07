@@ -61,102 +61,176 @@ def fetch_with_retry(url):
                 print(f"Retry {attempt+1} failed: {e}")
         return None
 
-def fetch_latest_release_from_html(url, platform):
-    """
-    Reads release notes webpage
-    Extracts latest version/date
-    Builds clean human-readable summary
-    """
+# (only showing the UPDATED FUNCTION — rest of your code remains SAME)
 
+def fetch_latest_release_from_html(url, platform):
     try:
         response = fetch_with_retry(url)
         if not response:
             print(f"❌ Failed to fetch {platform}")
             return None
+
         soup = BeautifulSoup(response.text, "html.parser")
+        main = soup.find("main") or soup
 
         version = None
         summary = []
 
-        # --------------------------------------------------
-        # 1️⃣ VERSION STYLE RELEASES (Google Ads)
-        # --------------------------------------------------
-        for h in soup.find_all(["h1", "h2", "h3"]):
-            text = h.get_text(strip=True)
+        # ==================================================
+        # ✅ GOOGLE ADS
+        # ==================================================
+        if "google-ads" in url:
 
-            version_match = re.search(r'v?\d+(\.\d+)+', text)
+            # Find correct version header
+            for h in main.find_all("h2"):
+                text = h.get_text(strip=True)
 
-            if version_match:
-                version = version_match.group(0)
+                if re.search(r'v\d+(\.\d+)+', text, re.IGNORECASE):
+                    version = text
+                    target = h
+                    break
 
-                nxt = h.find_next_sibling()
+            started = False
 
-                while nxt and len(summary) < 8:
-                    if nxt.name == "ul":
-                        for li in nxt.find_all("li"):
-                            summary.append(li.get_text(" ", strip=True))
+            for elem in target.find_all_next():
 
-                    if nxt.name == "p":
-                        summary.append(nxt.get_text(" ", strip=True))
+                if elem.name == "h2" and elem != target:
+                    break
 
-                    nxt = nxt.find_next_sibling()
+                if elem.name in ["h3", "h4"]:
+                    started = True
+                    continue
 
-                break
+                if not started:
+                    continue
 
-        # --------------------------------------------------
-        # 2️⃣ DATE BASED RELEASES (Microsoft + LinkedIn)
-        # --------------------------------------------------
-        if not version:
-            for h in soup.find_all(["h1", "h2", "h3"]):
+                if elem.name == "li":
+                    text = elem.get_text(" ", strip=True)
+
+                    if "introduces" in text.lower():
+                        continue
+                    if "the following new features" in text.lower():
+                        continue
+
+                    if len(text) > 30:
+                        summary.append(text)
+
+        # ==================================================
+        # ✅ MICROSOFT ADS
+        # ==================================================
+        elif "advertising" in url:
+
+            for h in main.find_all("h2"):
                 text = h.get_text(strip=True)
 
                 if re.search(
                     r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}',
                     text,
-                    re.IGNORECASE,
+                    re.IGNORECASE
                 ):
                     version = text
-
-                    nxt = h.find_next_sibling()
-
-                    while nxt and len(summary) < 8:
-                        if nxt.name == "ul":
-                            for li in nxt.find_all("li"):
-                                summary.append(li.get_text(" ", strip=True))
-
-                        if nxt.name == "p":
-                            summary.append(nxt.get_text(" ", strip=True))
-
-                        nxt = nxt.find_next_sibling()
-
+                    target = h
                     break
 
-        # --------------------------------------------------
-        # SAFETY CHECK
-        # --------------------------------------------------
-        if not version or not summary:
-            print(f"⚠️ {platform} release not parsed.")
-            return None
+            current_section = None
 
-        # --------------------------------------------------
-        # ✨ CLEAN HUMAN-READABLE FORMAT
-        # --------------------------------------------------
-        cleaned_summary = []
+            for elem in target.find_all_next():
 
-        for s in summary:
-            s = re.sub(r'\s+', ' ', s)      # remove extra spaces
-            s = s.replace(" .", ".")
-            if len(s) > 20:                # ignore tiny junk text
-                cleaned_summary.append(s)
+                # stop at next month
+                if elem.name == "h2" and elem != target:
+                    break
 
-        # bullet formatting for Google Sheet readability
+                # capture section title
+                if elem.name == "h3":
+                    current_section = elem.get_text(strip=True)
+                    continue
+
+                # ✅ ONLY take leaf <li> (no nested lists inside)
+                if elem.name == "li" and not elem.find("ul"):
+
+                    text = elem.get_text(" ", strip=True)
+
+                    if len(text) < 30:
+                        continue
+                    if "see below" in text.lower():
+                        continue
+
+                    # ✅ IGNORE shorter duplicate-like lines
+                    # keep only more detailed ones
+                    if ":" in text and text.count(":") > 1:
+                        continue
+
+                    if current_section:
+                        text = f"{current_section}: {text}"
+
+                    summary.append(text)
+
+        # ==================================================
+        # ✅ LINKEDIN ADS
+        # ==================================================
+        elif "linkedin" in url:
+
+            for h in main.find_all("h2"):
+                text = h.get_text(strip=True)
+
+                if "Version" in text:
+                    version = text
+                    target = h
+                    break
+
+            seen = set()
+
+            for elem in target.find_all_next():
+
+                if elem.name == "h2" and elem != target:
+                    break
+
+                # ✅ ONLY take bullet points (PRIMARY SOURCE)
+                if elem.name == "li":
+
+                    text = elem.get_text(" ", strip=True)
+
+                    if len(text) < 30:
+                        continue
+
+                    key = re.sub(r'\W+', '', text.lower())
+
+                    if key in seen:
+                        continue
+
+                    seen.add(key)
+                    summary.append(text)
+
+                # ✅ take paragraph ONLY if no bullet version exists
+                elif elem.name == "p":
+
+                    text = elem.get_text(" ", strip=True)
+
+                    if len(text) < 60:
+                        continue
+
+                    key = re.sub(r'\W+', '', text.lower())
+
+                    # skip if similar bullet already exists
+                    if any(key in s or s in key for s in seen):
+                        continue
+
+                    seen.add(key)
+                    summary.append(text)
+
+        # ==================================================
+        # ✅ FINAL CLEANUP
+        # ==================================================
+        if not summary:
+            summary = ["Release detected but details not parsed"]
+
         formatted_summary = "\n".join(
-            [f"• {line}" for line in cleaned_summary[:6]]
+            [f"• {line}" for line in summary[:10]]
         )
 
         return {
             "Platform": platform,
-            "Version/Release Month": version,
+            "Version/Release Month": version or "Latest",
             "Summary": formatted_summary,
             "Date": datetime.now().strftime("%Y-%m-%d"),
         }
